@@ -1,8 +1,0 @@
-{
-  "name": "Amma Travels",
-  "description": "Amma Travels - Premium Self Drive Cars and Bikes Rental Platform in Kakinada.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

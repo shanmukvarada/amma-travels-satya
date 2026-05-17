@@ -1,20 +1,11 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @theme {
-  --font-sans: var(--font-sans);
-  --font-heading: var(--font-heading);
-
   --color-primary: #0A2540;
   --color-primary-dark: #061727;
   --color-accent: #FF4E00;
   --color-accent-hover: #E04400;
   --color-surface: #F8F9FA;
-  --color-surface-dark: #121212;
-  --color-surface-darker: #0A0A0A;
-  
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
 }
 
 @layer base {

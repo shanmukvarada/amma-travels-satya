@@ -80,7 +80,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     setError('');
 
     try {
-      const compressOpts = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
+      const compressOpts = { maxSizeMB: 0.1, maxWidthOrHeight: 800, useWebWorker: true, initialQuality: 0.6 };
       
       const [compressedAadhar, compressedDl] = await Promise.all([
         imageCompression(aadharFile, compressOpts),
@@ -130,7 +130,10 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
 Documents uploaded and booking submitted via app.`;
       
       const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/917780763121?text=${encodedMessage}`;
+      const whatsappUrl = `https://wa.me/919652520222?text=${encodedMessage}`;
+      
+      // Navigate directly to avoid popup blockers from async delay
+      window.location.href = whatsappUrl;
       setSuccessWhatsappUrl(whatsappUrl);
     } catch (err) {
       console.error(err);
@@ -156,6 +159,9 @@ Documents uploaded and booking submitted via app.`;
             target="_blank"
             rel="noopener noreferrer"
             className="w-full inline-block bg-green-500 hover:bg-green-600 text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg transition-colors"
+            onClick={(e) => {
+              // It already Auto opened, but if user clicks again, allow it
+            }}
           >
             Send Details to WhatsApp
           </a>
@@ -269,9 +275,9 @@ Documents uploaded and booking submitted via app.`;
           <button 
             type="submit" 
             disabled={submitting}
-            className="w-full bg-red-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl hover:bg-red-700 transition-all disabled:opacity-70 flex justify-center items-center"
+            className="w-full bg-green-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl hover:bg-green-600 transition-all disabled:opacity-70 flex justify-center items-center"
           >
-            {submitting ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : 'Submit Request'}
+            {submitting ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : 'Send WhatsApp'}
           </button>
           
         </form>

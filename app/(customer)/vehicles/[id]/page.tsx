@@ -79,7 +79,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     setError('');
 
     try {
-      const compressOpts = { maxSizeMB: 0.1, maxWidthOrHeight: 800, useWebWorker: true, initialQuality: 0.6 };
+      const compressOpts = { maxSizeMB: 0.5, maxWidthOrHeight: 1000, useWebWorker: true, initialQuality: 0.8 };
       
       const [compressedAadhar, compressedDl] = await Promise.all([
         imageCompression(aadharFile, compressOpts),

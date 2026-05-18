@@ -69,10 +69,10 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
       const filesArray = Array.from(e.target.files);
       const uploadPromises = filesArray.map(async (file) => {
         const compressedFile = await imageCompression(file, {
-          maxSizeMB: 0.2,
-          maxWidthOrHeight: 1200,
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1000,
           useWebWorker: true,
-          initialQuality: 0.7
+          initialQuality: 0.8
         });
         
         const response = await fetch(`/api/upload?filename=${Date.now()}_${compressedFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`, {

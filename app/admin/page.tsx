@@ -2,255 +2,168 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, addDoc } from 'firebase/firestore';
-import { Booking, Vehicle, BusinessConfig } from '@/lib/types';
+import { collection, query, getDocs, doc, updateDoc, setDoc, addDoc, getDoc } from 'firebase/firestore';
+import { Booking, Vehicle } from '@/lib/types';
+import { Phone, CheckCircle, RotateCcw, Loader2, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function AdminDashboardPage() {
-  const [activeBookings, setActiveBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<BusinessConfig | null>(null);
 
-  // Return Modal State
-  const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
-  const [endingKm, setEndingKm] = useState<number | ''>('');
-  const [processingReturn, setProcessingReturn] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    setLoading(true);
-    // Config
-    const confSnap = await getDoc(doc(db, 'config', 'global'));
-    if (confSnap.exists()) setConfig(confSnap.data() as BusinessConfig);
-
-    // Active Bookings
-    const q = query(collection(db, 'bookings'), where('status', 'in', ['Active', 'Pending']));
-    const snap = await getDocs(q);
-    const data: Booking[] = [];
-    snap.forEach(d => data.push({ id: d.id, ...d.data() } as Booking));
-    setActiveBookings(data);
-    setLoading(false);
-  }
-
-  const seedInitialData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      // Create Config
-      await setDoc(doc(db, 'config', 'global'), {
-        companyName: 'Amma Travels',
-        phone: '9652520222',
-        address: 'Kakinada',
-        alertBanner: 'Welcome to Amma Travels - Book top quality cars and bikes!',
-        extraFeePerKm: 12,
-      });
-
-      // Check if vehicles already exist to avoid duplicates
-      const vSnap = await getDocs(collection(db, 'vehicles'));
-      if (vSnap.empty) {
-        // Car
-        await addDoc(collection(db, 'vehicles'), {
-          name: 'Swift Dzire',
-          model: 'VXI',
-          type: 'Car',
-          year: 2022,
-          fuelType: 'Petrol',
-          seatingCapacity: 4,
-          description: 'A comfortable and reliable sedan perfect for city tours and outstation trips.',
-          images: ['https://picsum.photos/seed/dzire/800/600'],
-          status: 'Available',
-          pricingTiers: [
-            { id: '1', hours: 12, price: 1500, kmLimit: 150 },
-            { id: '2', hours: 24, price: 2500, kmLimit: 300 },
-          ]
-        });
-
-        // Bike
-        await addDoc(collection(db, 'vehicles'), {
-          name: 'Royal Enfield Classic',
-          model: '350cc',
-          type: 'Bike',
-          year: 2021,
-          fuelType: 'Petrol',
-          seatingCapacity: 2,
-          description: 'Classic cruiser bike for adventurous rides. Enjoy the thumper.',
-          images: ['https://picsum.photos/seed/enfield/800/600'],
-          status: 'Available',
-          pricingTiers: [
-            { id: '1', hours: 12, price: 800, kmLimit: 100 },
-            { id: '2', hours: 24, price: 1400, kmLimit: 250 },
-          ]
-        });
-      }
-
-      await loadData();
-      alert("Database populated successfully!");
+      const snap = await getDocs(collection(db, 'bookings'));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Booking));
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setBookings(data);
     } catch (e) {
       console.error(e);
-      alert("Error seeding data");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const seedData = async () => {
+    if (!confirm('Seed database?')) return;
+    try {
+      setLoading(true);
+      // Car
+      await addDoc(collection(db, 'vehicles'), {
+        name: 'Swift Dzire', model: 'VXI', type: 'Car', year: 2022, fuelType: 'Petrol', seatingCapacity: 4,
+        description: 'A comfortable and reliable sedan perfect for city tours and outstation trips.',
+        images: ['https://picsum.photos/seed/dzire/800/600'], status: 'Available',
+        extraKmFee: 12, pricingTiers: [{ id: '1', hours: 12, price: 1500, kmLimit: 150 }]
+      });
+      // Bike
+      await addDoc(collection(db, 'vehicles'), {
+        name: 'Royal Enfield Classic', model: '350cc', type: 'Bike', year: 2021, fuelType: 'Petrol', seatingCapacity: 2,
+        description: 'Classic cruiser bike for adventurous rides. Enjoy the thumper.',
+        images: ['https://picsum.photos/seed/enfield/800/600'], status: 'Available',
+        extraKmFee: 5, pricingTiers: [{ id: '1', hours: 12, price: 800, kmLimit: 100 }]
+      });
+      alert('Data seeded');
+      loadData();
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+
   const approveBooking = async (b: Booking) => {
+    if (!b.id) return;
+    await updateDoc(doc(db, 'bookings', b.id), { status: 'Approved' });
+    loadData();
+  };
+  
+  const activateBooking = async (b: Booking) => {
     if (!b.id) return;
     await updateDoc(doc(db, 'bookings', b.id), { status: 'Active' });
     await updateDoc(doc(db, 'vehicles', b.vehicleId), { status: 'Booked' });
     loadData();
   };
 
-  const handleProcessReturn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!returnBooking || !returnBooking.id || !config) return;
-    
-    setProcessingReturn(true);
-    const kmLimit = returnBooking.selectedTier.kmLimit;
-    const finalKm = Number(endingKm);
-    
-    // We assume the user has driven 'finalKm' total since getting the car.
-    // If we wanted to track starting KM strictly, we'd need it in the booking.
-    // Let's assume endingKm is the total KM driven during the trip for simplicity.
-    const drivenKm = finalKm; 
-    let extraKmFee = 0;
-
-    if (drivenKm > kmLimit) {
-      const extraKm = drivenKm - kmLimit;
-      extraKmFee = extraKm * config.extraFeePerKm;
-    }
-
-    try {
-      await updateDoc(doc(db, 'bookings', returnBooking.id), {
-        status: 'Completed',
-        returnKm: drivenKm,
-        extraKmFee
-      });
-      await updateDoc(doc(db, 'vehicles', returnBooking.vehicleId), {
-        status: 'Available'
-      });
-      setReturnBooking(null);
-      setEndingKm('');
-      loadData();
-      alert(`Return processed successfully!\\nTotal Extra Fee: ₹${extraKmFee}`);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to process return');
-    } finally {
-      setProcessingReturn(false);
-    }
+  const markReturned = async (b: Booking) => {
+    if (!b.id) return;
+    await updateDoc(doc(db, 'bookings', b.id), { status: 'Returned', endDate: new Date().toISOString() });
+    await updateDoc(doc(db, 'vehicles', b.vehicleId), { status: 'Available' });
+    loadData();
   };
 
+  const pending = bookings.filter(b => b.status === 'Pending' || b.status === 'Approved');
+  const active = bookings.filter(b => b.status === 'Active');
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-600" size={32} /></div>;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Live Operations Tracker</h1>
-        <button 
-          onClick={seedInitialData} 
-          disabled={loading}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 font-medium"
-        >
-          Seed Initial Data
-        </button>
+        <h1 className="font-display text-3xl font-bold text-gray-900">Live Operations Pipeline</h1>
+        <button onClick={loadData} className="px-4 py-2 border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium">Refresh</button>
       </div>
-      
-      <div className="bg-white border text-gray-800 border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {activeBookings.map(b => (
-              <tr key={b.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-medium text-gray-900">{b.customerName}</div>
-                  <div className="text-sm text-gray-500">{b.phone}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{b.selectedTier.hours}h Package</div>
-                  <div className="text-sm font-medium text-gray-900">₹{b.totalBasePrice}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-xs text-gray-500">Pick: {format(new Date(b.startTime), 'dd MMM, p')}</div>
-                  <div className="text-xs text-gray-500">Drop: {format(new Date(b.endTime), 'dd MMM, p')}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    b.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        
+        {/* Pending & Approved Column */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-xl font-bold text-gray-900 border-b-2 border-red-600 pb-1">New Requests</h2>
+            <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full">{pending.length}</span>
+          </div>
+          
+          <div className="space-y-4">
+            {pending.length === 0 && <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">No pending requests.</p>}
+            {pending.map(b => (
+              <div key={b.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg">{b.customerName}</h3>
+                    <p className="text-sm text-gray-500 font-medium">{b.vehicleName} &bull; ₹{b.totalPrice}</p>
+                  </div>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${b.status === 'Pending' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
                     {b.status}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  {b.status === 'Pending' && (
-                    <button onClick={() => approveBooking(b)} className="text-blue-600 hover:text-blue-900 mr-4">Approve</button>
-                  )}
-                  {b.status === 'Active' && (
-                    <button onClick={() => setReturnBooking(b)} className="text-indigo-600 hover:text-indigo-900 mr-4">Process Return</button>
-                  )}
-                  <a href={b.aadhaarUrl} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-gray-700 mr-2 text-xs">Aadhaar</a>
-                  <a href={b.dlUrl} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-gray-700 text-xs">DL</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {activeBookings.length === 0 && (
-          <div className="p-8 text-center text-gray-500">No active or pending bookings.</div>
-        )}
-      </div>
-
-      {/* Process Return Modal */}
-      {returnBooking && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full m-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Process Vehicle Return</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Customer: {returnBooking.customerName}<br/>
-              Tier KM Limit: {returnBooking.selectedTier.kmLimit} km
-            </p>
-            <form onSubmit={handleProcessReturn}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Total Kilometers Driven</label>
-                <input 
-                  type="number" 
-                  value={endingKm}
-                  onChange={e => setEndingKm(e.target.value as unknown as number)}
-                  className="w-full border p-2 rounded text-gray-900" 
-                  required
-                  min={0}
-                />
-              </div>
-              
-              {endingKm !== '' && Number(endingKm) > returnBooking.selectedTier.kmLimit && (
-                <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">
-                  <b>Over Limit!</b><br/>
-                  Extra KM: {Number(endingKm) - returnBooking.selectedTier.kmLimit} km<br/>
-                  Extra Fee: ₹{(Number(endingKm) - returnBooking.selectedTier.kmLimit) * (config?.extraFeePerKm || 0)}
                 </div>
-              )}
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <a href={b.aadharUrl} target="_blank" className="text-red-600 hover:underline border border-red-100 bg-red-50 px-2 py-1.5 rounded text-center">View Aadhaar</a>
+                  <a href={b.dlUrl} target="_blank" className="text-red-600 hover:underline border border-red-100 bg-red-50 px-2 py-1.5 rounded text-center">View DL</a>
+                </div>
 
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setReturnBooking(null)} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={processingReturn} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                  {processingReturn ? 'Processing...' : 'Complete Return'}
-                </button>
+                <div className="flex gap-2 mt-auto pt-2">
+                  <a href={`tel:${b.customerPhone}`} className="flex-1 flex justify-center items-center py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg text-sm transition-colors">
+                    <Phone className="mr-2" size={16} /> Call
+                  </a>
+                  {b.status === 'Pending' && (
+                    <button onClick={() => approveBooking(b)} className="flex-1 flex justify-center items-center py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm shadow-sm transition-colors">
+                      <CheckCircle className="mr-2" size={16} /> Approve
+                    </button>
+                  )}
+                  {b.status === 'Approved' && (
+                    <button onClick={() => activateBooking(b)} className="flex-1 flex justify-center items-center py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm shadow-sm transition-colors">
+                      <ArrowRight className="mr-2" size={16} /> Start Trip
+                    </button>
+                  )}
+                </div>
               </div>
-            </form>
+            ))}
           </div>
-        </div>
-      )}
+        </section>
 
+        {/* Active on Road Column */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-xl font-bold text-gray-900 border-b-2 border-green-600 pb-1">Vehicles on Road</h2>
+            <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded-full">{active.length}</span>
+          </div>
+          
+          <div className="space-y-4">
+            {active.length === 0 && <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">No vehicles currently on the road.</p>}
+            {active.map(b => (
+              <div key={b.id} className="bg-white p-5 rounded-2xl shadow-sm border border-green-200 border-l-4 border-l-green-500">
+                <h3 className="font-bold text-lg mb-1">{b.vehicleName}</h3>
+                <p className="text-sm text-gray-600 mb-4">Rented to {b.customerName} &bull; {b.customerPhone}</p>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-xs text-gray-500">
+                    Started: {format(new Date(b.startDate), 'PP p')}
+                  </div>
+                  <button onClick={() => markReturned(b)} className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg text-sm transition-colors">
+                    <RotateCcw className="mr-2" size={16} /> Mark Returned
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        
+      </div>
+      
+      {bookings.length === 0 && (
+         <button onClick={seedData} className="mt-8 text-xs text-gray-400 hover:text-red-600 uncerline">seed demo data</button>
+      )}
     </div>
   );
 }

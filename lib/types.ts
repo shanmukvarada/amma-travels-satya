@@ -17,31 +17,29 @@ export interface Vehicle {
   images: string[];
   status: 'Available' | 'Booked' | 'Maintenance';
   pricingTiers: PricingTier[];
-  extraKmFee?: number;
+  extraKmFee: number;
 }
 
 export interface Booking {
   id?: string;
-  customerName: string;
-  phone: string;
-  address: string;
-  aadhaarUrl: string;
-  dlUrl: string;
   vehicleId: string;
+  vehicleName: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  aadharUrl: string;
+  dlUrl: string;
+  status: 'Pending' | 'Approved' | 'Active' | 'Returned' | 'Cancelled';
+  startDate: string; // ISO string
+  endDate?: string;
   selectedTier: PricingTier;
-  totalBasePrice: number;
-  status: 'Pending' | 'Active' | 'Completed';
-  startTime: string; // ISO string
-  endTime: string;   // ISO string
-  returnKm?: number;
-  extraKmFee?: number;
+  totalPrice: number;
+  createdAt: string;
 }
 
 export interface BusinessConfig {
-  id?: string;
   companyName: string;
   phone: string;
   address: string;
   alertBanner?: string;
-  extraFeePerKm: number;
 }

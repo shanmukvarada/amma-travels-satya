@@ -3,9 +3,10 @@
 import { useState, useRef } from 'react';
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Vehicle, PricingTier } from '@/lib/types';
 import { X, Trash2, Plus, UploadCloud, Loader2 } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 interface Props {
   onClose: () => void;
@@ -65,16 +66,20 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
     setUploading(true);
-    const newImages = [...(formData.images || [])];
     try {
-      for (let i = 0; i < e.target.files.length; i++) {
-        const file = e.target.files[i];
-        const fileRef = ref(storage, `vehicles/${Date.now()}_${file.name}`);
-        await uploadBytesResumable(fileRef, file);
-        const url = await getDownloadURL(fileRef);
-        newImages.push(url);
-      }
-      setFormData(prev => ({ ...prev, images: newImages }));
+      const filesArray = Array.from(e.target.files);
+      const uploadPromises = filesArray.map(async (file) => {
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1200,
+          useWebWorker: false,
+        });
+        const fileRef = ref(storage, `vehicles/${Date.now()}_${compressedFile.name}`);
+        const snapshot = await uploadBytes(fileRef, compressedFile);
+        return getDownloadURL(snapshot.ref);
+      });
+      const uploadedUrls = await Promise.all(uploadPromises);
+      setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...uploadedUrls] }));
     } catch (e) {
       console.error(e);
       alert('Upload failed');
@@ -115,7 +120,7 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
+        <form id="vehicle-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div><label className="block text-sm font-medium mb-1">Name</label><input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-600" /></div>
             <div><label className="block text-sm font-medium mb-1">Model</label><input required type="text" name="model" value={formData.model} onChange={handleChange} className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-600" /></div>
@@ -151,6 +156,14 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
               <button type="button" onClick={handleAddTier} className="text-sm bg-red-50 text-red-700 font-bold px-3 py-1.5 rounded flex items-center"><Plus size={16} className="mr-1"/> Add Tier</button>
             </div>
             <div className="space-y-2">
+              {formData.pricingTiers && formData.pricingTiers.length > 0 && (
+                <div className="flex gap-2 items-center px-3 pb-1">
+                  <div className="w-1/3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Hours</div>
+                  <div className="w-1/3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Price (₹)</div>
+                  <div className="w-1/3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">KM Limit</div>
+                  <div className="w-8"></div>
+                </div>
+              )}
               {formData.pricingTiers?.map(t => (
                 <div key={t.id} className="flex gap-2 items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
                   <input required type="number" placeholder="Hrs" value={t.hours} onChange={(e) => handleTierChange(t.id, 'hours', Number(e.target.value))} className="w-1/3 border rounded p-2 text-sm outline-none" />
@@ -183,7 +196,7 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
 
         <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
           <button type="button" onClick={onClose} className="px-5 py-2.5 font-bold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-100">Cancel</button>
-          <button type="submit" disabled={loading || uploading} className="px-5 py-2.5 font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50">
+          <button form="vehicle-form" type="submit" disabled={loading || uploading} className="px-5 py-2.5 font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50">
             {loading ? 'Saving...' : 'Save Vehicle'}
           </button>
         </div>

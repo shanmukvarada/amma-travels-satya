@@ -3,11 +3,12 @@
 import { useState, useEffect, use } from 'react';
 import { db, storage } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Vehicle, PricingTier, Booking } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, UploadCloud, Info } from 'lucide-react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 
 export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -26,6 +27,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [successWhatsappUrl, setSuccessWhatsappUrl] = useState('');
 
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -57,15 +59,20 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     setError('');
 
     try {
-      // Upload Aadhar
-      const aadharRef = ref(storage, `bookings/${Date.now()}_aadhar_${aadharFile.name}`);
-      await uploadBytesResumable(aadharRef, aadharFile);
-      const aadharUrl = await getDownloadURL(aadharRef);
+      const compressOpts = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: false };
+      
+      const [compressedAadhar, compressedDl] = await Promise.all([
+        imageCompression(aadharFile, compressOpts),
+        imageCompression(dlFile, compressOpts)
+      ]);
 
-      // Upload DL
-      const dlRef = ref(storage, `bookings/${Date.now()}_dl_${dlFile.name}`);
-      await uploadBytesResumable(dlRef, dlFile);
-      const dlUrl = await getDownloadURL(dlRef);
+      const aadharRef = ref(storage, `bookings/${Date.now()}_aadhar_${compressedAadhar.name}`);
+      const dlRef = ref(storage, `bookings/${Date.now()}_dl_${compressedDl.name}`);
+
+      const [aadharUrl, dlUrl] = await Promise.all([
+        uploadBytes(aadharRef, compressedAadhar).then(s => getDownloadURL(s.ref)),
+        uploadBytes(dlRef, compressedDl).then(s => getDownloadURL(s.ref))
+      ]) as [string, string];
 
       const bookingData: Partial<Booking> = {
         vehicleId: vehicle.id,
@@ -88,7 +95,22 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       const existing = JSON.parse(localStorage.getItem('my_bookings') || '[]');
       localStorage.setItem('my_bookings', JSON.stringify([...existing, docRef.id]));
 
-      router.push('/status');
+      const message = `Hello Amma Travels! I want to book a vehicle.
+
+*Vehicle:* ${vehicle.name} (${vehicle.year})
+*Package:* ${selectedTier.hours} Hours (${selectedTier.kmLimit} km limit)
+*Price:* ₹${selectedTier.price}
+
+*My Details:*
+*Name:* ${customerName}
+*Phone:* ${customerPhone}
+*Address:* ${address}
+
+Documents uploaded and booking submitted via app.`;
+      
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/917780763121?text=${encodedMessage}`;
+      setSuccessWhatsappUrl(whatsappUrl);
     } catch (err) {
       console.error(err);
       setError("Failed to create booking. Try again later.");
@@ -99,10 +121,38 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-600" size={32} /></div>;
   if (!vehicle) return <div className="text-center py-20 text-gray-500">Vehicle not found.</div>;
 
+  if (successWhatsappUrl) {
+    return (
+      <div className="max-w-md mx-auto pt-10 pb-8 text-center">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <h2 className="text-2xl font-display font-bold text-gray-900 mb-2">Request Submitted</h2>
+          <p className="text-gray-600 mb-6">Your details and documents have been securely uploaded.</p>
+          <a
+            href={successWhatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full inline-block bg-green-500 hover:bg-green-600 text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg transition-colors"
+          >
+            Send Details to WhatsApp
+          </a>
+          <button
+            onClick={() => router.push('/')}
+            className="w-full mt-4 font-bold text-gray-600 py-3 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto pb-8">
       <Link href="/" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-red-600 mb-6">
-        <ArrowLeft size={16} className="mr-1" /> Back to Fleet
+        <ArrowLeft size={16} className="mr-1" /> Back to Home
       </Link>
       
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 mb-8">

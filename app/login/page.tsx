@@ -2,43 +2,68 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
-  const [pin, setPin] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === '123456') { // Fixed PIN for simple environment auth
+    if (phone === '9652520222' && password === 'ammatravels@123') {
       localStorage.setItem('admin_auth', 'true');
       router.push('/admin');
     } else {
-      setError('Invalid PIN');
+      setError('Invalid phone number or password');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 max-w-sm w-full text-center">
-        <h1 className="text-2xl font-bold mb-2">Admin Login</h1>
-        <p className="text-gray-500 text-sm mb-6">Enter the admin PIN to access the dashboard. (Hint: 123456)</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 relative">
+      <div className="absolute top-6 left-6">
+        <Link href="/" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-red-600 transition-colors">
+          <ArrowLeft size={20} className="mr-2" /> Back to Home
+        </Link>
+      </div>
+
+      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 max-w-sm w-full">
+        <h1 className="text-2xl font-bold mb-2 text-center">Admin Login</h1>
+        <p className="text-gray-500 text-sm mb-6 text-center">Enter your credentials to access the dashboard.</p>
         
-        <input 
-          type="password" 
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Enter PIN"
-          className="w-full text-center tracking-widest border border-gray-300 rounded-lg p-3 mb-4 text-xl focus:outline-none focus:ring-2 focus:ring-red-600"
-        />
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Phone Number</label>
+            <input 
+              type="tel" 
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 9652520222"
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Password</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+            />
+          </div>
+        </div>
         
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        {error && <p className="text-red-500 text-sm mb-4 text-center bg-red-50 p-2 rounded-lg">{error}</p>}
         
         <button 
           type="submit"
-          className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition"
+          className="w-full bg-red-600 text-white font-bold py-3.5 rounded-xl hover:bg-red-700 transition shadow-sm hover:shadow-md"
         >
-          Login
+          Login to Dashboard
         </button>
       </form>
     </div>

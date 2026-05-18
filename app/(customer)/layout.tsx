@@ -12,8 +12,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </Link>
           <div className="flex items-center gap-6 text-sm font-medium">
             <nav className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-gray-300 hover:text-white transition-colors">Fleet</Link>
-              <Link href="/status" className="text-gray-300 hover:text-white transition-colors">Booking Status</Link>
+              <Link href="/" className="text-gray-300 hover:text-white transition-colors">Home</Link>
             </nav>
             <UserMenu />
           </div>

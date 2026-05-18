@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Vehicle, PricingTier } from '@/lib/types';
 import { X, Trash2, Plus, UploadCloud, Loader2 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
@@ -75,9 +74,15 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
           useWebWorker: true,
           initialQuality: 0.7
         });
-        const fileRef = ref(storage, `vehicles/${Date.now()}_${compressedFile.name}`);
-        const snapshot = await uploadBytes(fileRef, compressedFile);
-        return getDownloadURL(snapshot.ref);
+        
+        const response = await fetch(`/api/upload?filename=${Date.now()}_${compressedFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`, {
+          method: 'POST',
+          body: compressedFile,
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+        const blob = await response.json();
+        return blob.url;
       });
       const uploadedUrls = await Promise.all(uploadPromises);
       setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...uploadedUrls] }));

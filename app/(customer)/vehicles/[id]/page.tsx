@@ -3,7 +3,6 @@
 import { useState, useEffect, use } from 'react';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Vehicle, PricingTier, Booking } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, UploadCloud, Info } from 'lucide-react';
@@ -87,13 +86,20 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         imageCompression(dlFile, compressOpts)
       ]);
 
-      const aadharRef = ref(storage, `bookings/${Date.now()}_aadhar_${compressedAadhar.name}`);
-      const dlRef = ref(storage, `bookings/${Date.now()}_dl_${compressedDl.name}`);
+      const uploadToBlob = async (file: File, prefix: string) => {
+        const response = await fetch(`/api/upload?filename=${Date.now()}_${prefix}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`, {
+          method: 'POST',
+          body: file,
+        });
+        if (!response.ok) throw new Error('Upload failed');
+        const blob = await response.json();
+        return blob.url;
+      };
 
       const [aadharUrl, dlUrl] = await Promise.all([
-        uploadBytes(aadharRef, compressedAadhar).then(s => getDownloadURL(s.ref)),
-        uploadBytes(dlRef, compressedDl).then(s => getDownloadURL(s.ref))
-      ]) as [string, string];
+        uploadToBlob(compressedAadhar, 'aadhar'),
+        uploadToBlob(compressedDl, 'dl')
+      ]);
 
       const bookingData: Partial<Booking> = {
         vehicleId: vehicle.id,

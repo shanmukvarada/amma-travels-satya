@@ -80,7 +80,11 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
           body: compressedFile,
         });
 
-        if (!response.ok) throw new Error('Upload failed');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        }
+        
         const blob = await response.json();
         return blob.url;
       });

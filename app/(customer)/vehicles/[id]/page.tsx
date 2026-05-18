@@ -91,7 +91,12 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           method: 'POST',
           body: file,
         });
-        if (!response.ok) throw new Error('Upload failed');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        }
+        
         const blob = await response.json();
         return blob.url;
       };

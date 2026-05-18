@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Vehicle, PricingTier, Booking } from '@/lib/types';
@@ -28,6 +28,26 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successWhatsappUrl, setSuccessWhatsappUrl] = useState('');
+
+  // Fetch Auth User & Profile Data
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+      if (u) {
+        setCustomerName(u.displayName || '');
+        try {
+          const docSnap = await getDoc(doc(db, 'users', u.uid));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.phone) setCustomerPhone(data.phone);
+            if (data.address) setAddress(data.address);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchVehicle = async () => {

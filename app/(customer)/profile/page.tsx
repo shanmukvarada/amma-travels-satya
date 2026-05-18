@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { User, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Mail, User as UserIcon, Calendar, ArrowLeft, Phone, MapPin, Edit2, Loader2, Check } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ProfilePage() {
+function ProfileContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -19,6 +19,13 @@ export default function ProfilePage() {
   const [address, setAddress] = useState('');
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('edit') === 'true') {
+      setIsEditing(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -106,15 +113,15 @@ export default function ProfilePage() {
         
         <div className="px-8 pt-16 pb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{user.displayName || 'Traveler'}</h1>
-          <p className="text-gray-500 text-sm mb-8 flex items-center gap-1.5">
+          <p className="text-gray-500 text-sm mb-6 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
             Logged in
           </p>
 
-          <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="bg-white p-2.5 rounded-xl shadow-sm text-gray-400">
-                <UserIcon size={20} />
+          <div className="space-y-2">
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="bg-white p-2 rounded-xl shadow-sm text-gray-400">
+                <UserIcon size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5 tracking-wider">Full Name</p>
@@ -126,9 +133,9 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="bg-white p-2.5 rounded-xl shadow-sm text-gray-400">
-                <Phone size={20} />
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="bg-white p-2 rounded-xl shadow-sm text-gray-400">
+                <Phone size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5 tracking-wider">Phone Number</p>
@@ -140,9 +147,9 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="bg-white p-2.5 rounded-xl shadow-sm text-gray-400">
-                <MapPin size={20} />
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="bg-white p-2 rounded-xl shadow-sm text-gray-400">
+                <MapPin size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5 tracking-wider">Address</p>
@@ -154,9 +161,9 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="bg-white p-2.5 rounded-xl shadow-sm text-gray-400">
-                <Mail size={20} />
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="bg-white p-2 rounded-xl shadow-sm text-gray-400">
+                <Mail size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5 tracking-wider">Email Address</p>
@@ -164,9 +171,9 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="bg-white p-2.5 rounded-xl shadow-sm text-gray-400">
-                <Calendar size={20} />
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="bg-white p-2 rounded-xl shadow-sm text-gray-400">
+                <Calendar size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5 tracking-wider">Account Created</p>
@@ -183,5 +190,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>}>
+      <ProfileContent />
+    </Suspense>
   );
 }

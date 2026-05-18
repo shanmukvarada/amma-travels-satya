@@ -72,7 +72,7 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
         const compressedFile = await imageCompression(file, {
           maxSizeMB: 0.5,
           maxWidthOrHeight: 1200,
-          useWebWorker: false,
+          useWebWorker: true,
         });
         const fileRef = ref(storage, `vehicles/${Date.now()}_${compressedFile.name}`);
         const snapshot = await uploadBytes(fileRef, compressedFile);

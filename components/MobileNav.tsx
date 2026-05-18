@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, FileText, PhoneCall } from 'lucide-react';
+import { Home, FileText, PhoneCall, MapPin } from 'lucide-react';
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -21,6 +21,13 @@ export default function MobileNav() {
           <PhoneCall size={20} className="text-red-600" />
         </div>
         <span className="text-[10px]">Call</span>
+      </a>
+
+      <a href="https://maps.app.goo.gl/q3ZU2kcDAiHGUJPo7?g_st=aw" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2 min-w-[70px] text-gray-500 font-medium">
+        <div className="p-1.5 rounded-full mb-1 hover:bg-gray-50">
+          <MapPin size={20} className="text-blue-600" />
+        </div>
+        <span className="text-[10px]">Location</span>
       </a>
     </nav>
   );

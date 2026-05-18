@@ -28,7 +28,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           <div className="flex flex-row items-center justify-between border-b border-gray-800 pb-5 mb-5">
             <img src="/logo.png" alt="Amma Travels Logo" className="h-10 w-auto object-contain shrink-0 pr-4" />
             <div className="text-xs text-gray-400 space-y-1.5 text-right shrink-0">
-              <p className="flex items-center justify-end gap-1.5">📍 Kakinada, AP</p>
+              <p className="flex items-center justify-end gap-1.5 pt-1.5"><a href="https://maps.app.goo.gl/q3ZU2kcDAiHGUJPo7?g_st=aw" target="_blank" rel="noopener noreferrer" className="hover:text-red-400 inline-flex items-center gap-1">📍 Kakinada, AP</a></p>
               <p className="flex items-center justify-end gap-1.5">📞 <a href="tel:+919652520222" className="text-red-500 hover:text-red-400 font-bold">+91 9652520222</a></p>
             </div>
           </div>

@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { PhoneCall, Users, Fuel, Calendar, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
+import ImageSlider from '@/components/ImageSlider';
+
 export default function HomePage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,13 +71,9 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVehicles.map(vehicle => (
             <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all hover:border-red-200 flex flex-col">
-              <div className="relative h-48 w-full bg-gray-100">
-                {vehicle.images?.[0] ? (
-                  <img src={vehicle.images[0]} alt={vehicle.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full text-gray-400">No Image</div>
-                )}
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold rounded-lg text-gray-800">
+              <div className="relative h-48 w-full bg-gray-100 flex-shrink-0 z-0">
+                <ImageSlider images={vehicle.images} alt={vehicle.name} />
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold rounded-lg text-gray-800 z-10">
                   {vehicle.type}
                 </div>
               </div>

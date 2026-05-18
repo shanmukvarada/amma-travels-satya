@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, UploadCloud, Info } from 'lucide-react';
 import Link from 'next/link';
 import imageCompression from 'browser-image-compression';
+import ImageSlider from '@/components/ImageSlider';
 
 export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -79,7 +80,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     setError('');
 
     try {
-      const compressOpts = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: false };
+      const compressOpts = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
       
       const [compressedAadhar, compressedDl] = await Promise.all([
         imageCompression(aadharFile, compressOpts),
@@ -176,13 +177,8 @@ Documents uploaded and booking submitted via app.`;
       </Link>
       
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 mb-8">
-        <div className="h-64 sm:h-80 bg-gray-100 overflow-x-auto flex snap-x snap-mandatory">
-          {vehicle.images && vehicle.images.map((img, i) => (
-            <img key={i} src={img} alt={`${vehicle.name} ${i+1}`} className="h-full w-full object-cover shrink-0 snap-center" />
-          ))}
-          {(!vehicle.images || vehicle.images.length === 0) && (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image Available</div>
-          )}
+        <div className="h-64 sm:h-80 bg-gray-100 flex-shrink-0 z-0 relative">
+          <ImageSlider images={vehicle.images || []} alt={vehicle.name} />
         </div>
         <div className="p-6">
           <h1 className="font-display text-3xl font-bold text-gray-900 mb-2">{vehicle.name}</h1>

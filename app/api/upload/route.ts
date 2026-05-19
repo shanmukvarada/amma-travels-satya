@@ -25,7 +25,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const contentType = request.headers.get('content-type');
     
     const blob = await put(filename, buffer, {
-      access: 'public',
+      access: 'private',
       token: token,
       ...(contentType ? { contentType } : {}),
     });

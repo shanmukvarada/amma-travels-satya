@@ -2,8 +2,9 @@
 
 import { useState, useEffect, use } from 'react';
 import { auth, db, storage } from '@/lib/firebase';
-import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
-import { Vehicle, PricingTier, Booking } from '@/lib/types';
+import { doc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Vehicle, PricingTier } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, UploadCloud, Info } from 'lucide-react';
 import Link from 'next/link';
@@ -86,46 +87,19 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         imageCompression(dlFile, compressOpts)
       ]);
 
-      const uploadToBlob = async (file: File, prefix: string) => {
-        const response = await fetch(`/api/upload?filename=${Date.now()}_${prefix}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`, {
-          method: 'POST',
-          body: file,
-        });
+      const uploadToStorage = async (file: File, prefix: string) => {
+        const fileName = `${Date.now()}_${prefix}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const storageRef = ref(storage, `documents/${fileName}`);
         
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Upload failed with status ${response.status}`);
-        }
-        
-        const blob = await response.json();
-        return blob.url;
+        await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(storageRef);
+        return downloadUrl;
       };
 
       const [aadharUrl, dlUrl] = await Promise.all([
-        uploadToBlob(compressedAadhar, 'aadhar'),
-        uploadToBlob(compressedDl, 'dl')
+        uploadToStorage(compressedAadhar, 'aadhar'),
+        uploadToStorage(compressedDl, 'dl')
       ]);
-
-      const bookingData: Partial<Booking> = {
-        vehicleId: vehicle.id,
-        vehicleName: `${vehicle.name} (${vehicle.year})`,
-        customerName,
-        customerPhone,
-        address,
-        aadharUrl,
-        dlUrl,
-        status: 'Pending',
-        startDate: new Date().toISOString(),
-        selectedTier,
-        totalPrice: selectedTier.price,
-        createdAt: new Date().toISOString()
-      };
-
-      const docRef = await addDoc(collection(db, 'bookings'), bookingData);
-      
-      // Store ID in local storage so status page can track it
-      const existing = JSON.parse(localStorage.getItem('my_bookings') || '[]');
-      localStorage.setItem('my_bookings', JSON.stringify([...existing, docRef.id]));
 
       const message = `Hello Amma Travels! I want to book a vehicle.
 
@@ -138,7 +112,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
 *Phone:* ${customerPhone}
 *Address:* ${address}
 
-Documents uploaded and booking submitted via app.`;
+*Documents Uploaded:*
+*Aadhar:* ${aadharUrl}
+*Driving License:* ${dlUrl}`;
       
       const encodedMessage = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/919652520222?text=${encodedMessage}`;

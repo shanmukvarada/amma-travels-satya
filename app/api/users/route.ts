@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     if (!uid) return NextResponse.json({ error: 'uid is required' }, { status: 400 });
 
     const { db } = await connectToDatabase();
-    const doc = await db.collection('users').findOne({ _id: uid });
+    const doc = await db.collection('users').findOne({ _id: uid as any });
     if (!doc) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
     const { _id, ...rest } = doc as any;
@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest) {
 
     const payload = await request.json();
     const { db } = await connectToDatabase();
-    await db.collection('users').updateOne({ _id: id }, { $set: payload }, { upsert: true });
+    await db.collection('users').updateOne({ _id: id as any }, { $set: payload }, { upsert: true });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

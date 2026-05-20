@@ -1,6 +1,6 @@
 import { MongoClient, Db } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI as string;
 const dbName = process.env.MONGODB_DB || process.env.MONGODB_DB_NAME || 'amma_travels';
 
 if (!uri) {

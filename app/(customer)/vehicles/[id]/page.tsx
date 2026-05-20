@@ -106,6 +106,30 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         uploadToStorage(compressedDl, 'dl')
       ]);
 
+      // Save the booking to the database
+      try {
+        await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicleId: vehicle.id || (vehicle as any)._id,
+            vehicleName: vehicle.name,
+            tierId: selectedTier.id,
+            price: selectedTier.price,
+            hours: selectedTier.hours,
+            kmLimit: selectedTier.kmLimit,
+            customerName,
+            customerPhone,
+            address,
+            aadharUrl,
+            dlUrl
+          })
+        });
+      } catch (dbErr) {
+        console.error("Failed to save to database:", dbErr);
+        // We can swallow this error and still send whatsapp, or handle it as needed.
+      }
+
       const message = `Hello Amma Travels! I want to book a vehicle.
 
 *Vehicle:* ${vehicle.name} (${vehicle.year})
@@ -155,7 +179,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
               // It already Auto opened, but if user clicks again, allow it
             }}
           >
-            Send Details to WhatsApp
+            Open WhatsApp
           </a>
           <button
             onClick={() => router.push('/')}
@@ -269,7 +293,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
             disabled={submitting}
             className="w-full bg-green-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl hover:bg-green-600 transition-all disabled:opacity-70 flex justify-center items-center"
           >
-            {submitting ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : 'Send WhatsApp'}
+            {submitting ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : 'Book Appointment & WhatsApp'}
           </button>
           
         </form>

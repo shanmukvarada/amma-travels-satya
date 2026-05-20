@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,6 +39,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, bookingId: result.insertedId });
   } catch (err: any) {
     console.error('bookings POST error', err);
+    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    const payload = await request.json();
+    const { db } = await connectToDatabase();
+    
+    await db.collection('bookings').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: payload.status, updatedAt: new Date() } }
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error('bookings PUT error', err);
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }
 }

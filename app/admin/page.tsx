@@ -46,6 +46,19 @@ export default function AdminVehiclesPage() {
     loadData();
   };
 
+  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      await fetch(`/api/bookings?id=${encodeURIComponent(bookingId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      loadData();
+    } catch (e) {
+      console.error('Failed to update booking', e);
+    }
+  };
+
   const seedVehicles = async () => {
     try {
       setLoading(true);
@@ -325,11 +338,19 @@ export default function AdminVehiclesPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
-                        b.status === 'Pending' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {b.status || 'Pending'}
-                      </span>
+                      <select
+                        value={b.status || 'Pending'}
+                        onChange={(e) => updateBookingStatus(b.id, e.target.value)}
+                        className={`inline-block px-3 py-1.5 text-xs font-bold rounded-xl border outline-none cursor-pointer appearance-none ${
+                          b.status === 'Pending' ? 'bg-amber-50 text-amber-800 border-amber-200 focus:ring-2 focus:ring-amber-500' : 
+                          b.status === 'Confirmed' ? 'bg-green-50 text-green-800 border-green-200 focus:ring-2 focus:ring-green-500' :
+                          'bg-red-50 text-red-800 border-red-200 focus:ring-2 focus:ring-red-500'
+                        }`}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
                     </td>
                   </tr>
                 )) : (

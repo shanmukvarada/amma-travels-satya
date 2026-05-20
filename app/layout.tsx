@@ -7,7 +7,7 @@ const space = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' });
 
 export const metadata: Metadata = {
   title: 'Amma Travels | Kakinada',
-  description: 'Book your cars and bikes with ease.',
+  description: 'Premium car and bike rentals in Kakinada. Book your vehicle with ease.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

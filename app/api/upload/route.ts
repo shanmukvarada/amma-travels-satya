@@ -23,14 +23,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const contentType = request.headers.get('content-type');
-    
+    const shouldMultipart = buffer.byteLength > 5 * 1024 * 1024;
+
     const blob = await put(filename, buffer, {
       access: 'private',
-      token: token,
+      token,
+      multipart: shouldMultipart,
       ...(contentType ? { contentType } : {}),
     });
 
-    return NextResponse.json(blob);
+    // Provide a same-origin preview URL for convenience (works for private stores)
+    const previewUrl = blob && blob.pathname ? `/api/blob/preview?pathname=${encodeURIComponent(blob.pathname)}` : undefined;
+
+    return NextResponse.json({ ...blob, previewUrl });
   } catch (error: any) {
     console.error('Error uploading to Vercel Blob:', error);
     

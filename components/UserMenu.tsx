@@ -1,9 +1,8 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 export default function UserMenu() {
@@ -26,11 +25,16 @@ export default function UserMenu() {
       const user = result.user;
       
       // Check if user has complete profile
-      const docRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists() || !docSnap.data().phone || !docSnap.data().address) {
-        // Redirect to profile page to complete profile
+      try {
+        const resp = await fetch(`/api/users?uid=${encodeURIComponent(user.uid)}`);
+        if (!resp.ok) {
+          router.push('/profile?edit=true');
+        } else {
+          const data = await resp.json();
+          if (!data.phone || !data.address) router.push('/profile?edit=true');
+        }
+      } catch (e) {
+        // If the users API fails, redirect to profile to be safe
         router.push('/profile?edit=true');
       }
     } catch (error) {

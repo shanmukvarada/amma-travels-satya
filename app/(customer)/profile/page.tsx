@@ -1,9 +1,8 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { User, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Mail, User as UserIcon, Calendar, ArrowLeft, Phone, MapPin, Edit2, Loader2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,11 +32,11 @@ function ProfileContent() {
         setUser(u);
         setFullName(u.displayName || '');
         
-        // Fetch extra details from Firestore
+        // Fetch extra details from server-side users API
         try {
-          const docSnap = await getDoc(doc(db, 'users', u.uid));
-          if (docSnap.exists()) {
-            const data = docSnap.data();
+          const resp = await fetch(`/api/users?uid=${encodeURIComponent(u.uid)}`);
+          if (resp.ok) {
+            const data = await resp.json();
             setPhone(data.phone || '');
             setAddress(data.address || '');
           }
@@ -59,11 +58,11 @@ function ProfileContent() {
       if (fullName !== user.displayName) {
         await updateProfile(user, { displayName: fullName });
       }
-      await setDoc(doc(db, 'users', user.uid), {
-        phone,
-        address,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      await fetch(`/api/users?id=${encodeURIComponent(user.uid)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, address, updatedAt: new Date().toISOString() }),
+      });
       setIsEditing(false);
     } catch (err) {
       console.error(err);

@@ -1,9 +1,7 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { auth, db, storage } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth } from '@/lib/firebase';
 import { Vehicle, PricingTier } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, UploadCloud, Info } from 'lucide-react';
@@ -36,9 +34,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       if (u) {
         setCustomerName(u.displayName || '');
         try {
-          const docSnap = await getDoc(doc(db, 'users', u.uid));
-          if (docSnap.exists()) {
-            const data = docSnap.data();
+          const resp = await fetch(`/api/users?uid=${encodeURIComponent(u.uid)}`);
+          if (resp.ok) {
+            const data = await resp.json();
             if (data.phone) setCustomerPhone(data.phone);
             if (data.address) setAddress(data.address);
           }
@@ -53,10 +51,10 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     const fetchVehicle = async () => {
       try {
-        const docRef = doc(db, 'vehicles', resolvedParams.id);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          setVehicle({ id: snapshot.id, ...snapshot.data() } as Vehicle);
+        const resp = await fetch(`/api/vehicles?id=${encodeURIComponent(resolvedParams.id)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setVehicle(data as Vehicle);
         }
       } catch (err) {
         console.error(err);
@@ -89,11 +87,18 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
 
       const uploadToStorage = async (file: File, prefix: string) => {
         const fileName = `${Date.now()}_${prefix}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-        const storageRef = ref(storage, `documents/${fileName}`);
-        
-        await uploadBytes(storageRef, file);
-        const downloadUrl = await getDownloadURL(storageRef);
-        return downloadUrl;
+        const params = new URLSearchParams({ filename: fileName });
+        const resp = await fetch(`/api/upload?${params.toString()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || 'Upload failed');
+        if (data.previewUrl) return data.previewUrl;
+        // Prefer proxied preview for private stores when a pathname is returned.
+        if (data.pathname) return `/api/blob/preview?pathname=${encodeURIComponent(data.pathname)}`;
+        return data.downloadUrl || data.url;
       };
 
       const [aadharUrl, dlUrl] = await Promise.all([

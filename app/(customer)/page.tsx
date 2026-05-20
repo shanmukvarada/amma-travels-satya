@@ -1,8 +1,6 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Vehicle } from '@/lib/types';
 import Link from 'next/link';
 import { PhoneCall, Users, Fuel, Calendar, Loader2 } from 'lucide-react';
@@ -19,11 +17,10 @@ export default function HomePage() {
     const fetchVehicles = async () => {
       try {
         setLoading(true);
-        // Only fetch available vehicles
-        const q = query(collection(db, 'vehicles'), where('status', '==', 'Available'));
-        const snap = await getDocs(q);
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle));
-        setVehicles(data);
+        const res = await fetch('/api/vehicles');
+        const data = await res.json();
+        const available = (Array.isArray(data) ? data : []).filter((v: any) => v.status === 'Available');
+        setVehicles(available as Vehicle[]);
       } catch (err) {
         console.error("Failed to load vehicles", err);
       } finally {

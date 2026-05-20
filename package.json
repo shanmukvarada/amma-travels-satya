@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:blob-urls": "node scripts/migrate_blob_urls.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",
@@ -16,6 +17,7 @@
     "firebase": "^12.13.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.470.0",
+    "mongodb": "^5.9.2",
     "next": "15.1.11",
     "react": "19.0.0",
     "react-dom": "19.0.0",

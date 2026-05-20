@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { Vehicle, PricingTier } from '@/lib/types';
 import { X, Trash2, Plus, UploadCloud, Loader2 } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import imageCompression from 'browser-image-compression';
 
 interface Props {
@@ -63,28 +60,51 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
     }));
   };
 
+  const uploadImageToVercelBlob = async (file: File): Promise<string> => {
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+    const params = new URLSearchParams({ filename: fileName });
+    const response = await fetch(`/api/upload?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    });
+
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    // For private stores the returned `downloadUrl` may not be usable from
+    // the browser (it requires auth). Prefer a same-origin proxy when the
+    // server provides a `pathname`. Fall back to `downloadUrl`/`url` otherwise.
+    if (data.previewUrl) return data.previewUrl;
+    const pathname = data.pathname || '';
+    if (pathname) return `/api/blob/preview?pathname=${encodeURIComponent(pathname)}`;
+
+    return data.downloadUrl || data.url || '';
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
     setUploading(true);
     try {
       const filesArray = Array.from(e.target.files);
-      const uploadPromises = filesArray.map(async (file) => {
+      const uploadedUrls: string[] = [];
+
+      for (const file of filesArray) {
         const compressedFile = await imageCompression(file, {
           maxSizeMB: 0.8,
           maxWidthOrHeight: 1000,
           useWebWorker: true,
-          initialQuality: 0.8
+          initialQuality: 0.8,
         });
-        
-        const fileName = `${Date.now()}_${compressedFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-        const storageRef = ref(storage, `vehicles/${fileName}`);
-        
-        await uploadBytes(storageRef, compressedFile);
-        const downloadUrl = await getDownloadURL(storageRef);
-        
-        return downloadUrl;
-      });
-      const uploadedUrls = await Promise.all(uploadPromises);
+
+        const uploadedUrl = await uploadImageToVercelBlob(compressedFile as File);
+        uploadedUrls.push(uploadedUrl);
+      }
+
       setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...uploadedUrls] }));
     } catch (e) {
       console.error(e);
@@ -105,8 +125,22 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
         extraKmFee: Number(formData.extraKmFee),
       };
 
-      if (vehicleToEdit?.id) await updateDoc(doc(db, 'vehicles', vehicleToEdit.id), payload);
-      else await addDoc(collection(db, 'vehicles'), payload);
+      if (vehicleToEdit?.id) {
+        const res = await fetch(`/api/vehicles?id=${encodeURIComponent(vehicleToEdit.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Failed to update vehicle');
+      } else {
+        const res = await fetch('/api/vehicles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Failed to create vehicle');
+      }
+
       onSaved();
     } catch (err) {
       console.error(err);

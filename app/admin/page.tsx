@@ -1,8 +1,6 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Vehicle } from '@/lib/types';
 import { VehicleFormModal } from '@/components/VehicleFormModal';
 import { Loader2, Edit, Power, Trash2, ShieldAlert } from 'lucide-react';
@@ -17,8 +15,9 @@ export default function AdminVehiclesPage() {
   const loadVehicles = async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(collection(db, 'vehicles'));
-      setVehicles(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vehicle)));
+      const res = await fetch('/api/vehicles');
+      const data = await res.json();
+      setVehicles(Array.isArray(data) ? data as Vehicle[] : []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -31,7 +30,11 @@ export default function AdminVehiclesPage() {
   const toggleStatus = async (v: Vehicle) => {
     if (!v.id) return;
     const newStatus = v.status === 'Available' ? 'Unavailable' : 'Available';
-    await updateDoc(doc(db, 'vehicles', v.id), { status: newStatus });
+    await fetch(`/api/vehicles?id=${encodeURIComponent(v.id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
     loadVehicles();
   };
 
@@ -156,9 +159,11 @@ export default function AdminVehiclesPage() {
       ];
 
       for (const vehicle of sampleVehicles) {
-        // use setDoc with a new doc to avoid duplicate ids logic complexity if relying on addDoc but we just use addDoc
-        await collection(db, 'vehicles');
-        await import('firebase/firestore').then(({ addDoc }) => addDoc(collection(db, 'vehicles'), vehicle));
+        await fetch('/api/vehicles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(vehicle),
+        });
       }
       loadVehicles();
     } catch (e) {
@@ -171,7 +176,7 @@ export default function AdminVehiclesPage() {
   const deleteVehicle = async (v: Vehicle) => {
     if (!v.id) return;
     if (confirm(`Are you sure you want to delete ${v.name}?`)) {
-      await deleteDoc(doc(db, 'vehicles', v.id));
+      await fetch(`/api/vehicles?id=${encodeURIComponent(v.id)}`, { method: 'DELETE' });
       loadVehicles();
     }
   };

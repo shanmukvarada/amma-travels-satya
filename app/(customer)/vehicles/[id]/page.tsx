@@ -95,9 +95,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         });
         const data = await resp.json();
         if (!resp.ok || data.error) throw new Error(data.error || 'Upload failed');
-        if (data.previewUrl) return data.previewUrl;
+        if (data.previewUrl) return new URL(data.previewUrl, window.location.origin).toString();
         // Prefer proxied preview for private stores when a pathname is returned.
-        if (data.pathname) return `/api/blob/preview?pathname=${encodeURIComponent(data.pathname)}`;
+        if (data.pathname) return new URL(`/api/blob/preview?pathname=${encodeURIComponent(data.pathname)}`, window.location.origin).toString();
         return data.downloadUrl || data.url;
       };
 

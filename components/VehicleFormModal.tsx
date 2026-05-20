@@ -79,9 +79,9 @@ export function VehicleFormModal({ onClose, onSaved, vehicleToEdit }: Props) {
     // For private stores the returned `downloadUrl` may not be usable from
     // the browser (it requires auth). Prefer a same-origin proxy when the
     // server provides a `pathname`. Fall back to `downloadUrl`/`url` otherwise.
-    if (data.previewUrl) return data.previewUrl;
+    if (data.previewUrl) return new URL(data.previewUrl, window.location.origin).toString();
     const pathname = data.pathname || '';
-    if (pathname) return `/api/blob/preview?pathname=${encodeURIComponent(pathname)}`;
+    if (pathname) return new URL(`/api/blob/preview?pathname=${encodeURIComponent(pathname)}`, window.location.origin).toString();
 
     return data.downloadUrl || data.url || '';
   };

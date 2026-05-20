@@ -32,8 +32,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ...(contentType ? { contentType } : {}),
     });
 
-    // Provide a same-origin preview URL for convenience (works for private stores)
-    const previewUrl = blob && blob.pathname ? `/api/blob/preview?pathname=${encodeURIComponent(blob.pathname)}` : undefined;
+    // Provide an absolute preview URL so it works when pasted into WhatsApp or opened off-origin.
+    const previewUrl = blob?.pathname
+      ? new URL(`/api/blob/preview?pathname=${encodeURIComponent(blob.pathname)}`, request.url).toString()
+      : undefined;
 
     return NextResponse.json({ ...blob, previewUrl });
   } catch (error: any) {
